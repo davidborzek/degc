@@ -1,0 +1,13 @@
+# degc workstation integration-test config (see test/run.sh).
+#
+# The egress is a throwaway dummy interface: marked (member) traffic is routed to
+# it and silently discarded, which proves diversion + fail-closed WITHOUT any
+# real tunnel or credentials. mark 0x1111 / table 4242 are chosen to avoid the
+# workstation's nm-wg-home (fwmark 0xcc4d / table 52301).
+- name: testvpn
+  egress:
+    interface: degctest0
+  snat: false
+  mark: "0x1111"
+  table: 4242
+  localSubnets: ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]

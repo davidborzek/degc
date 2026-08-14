@@ -1,0 +1,6 @@
+# gluetun gateway mode: forward + masquerade the Docker subnet onto the tunnel,
+# so degc members routed here as next-hop egress through the VPN. Adjust the
+# subnet to your Docker network; tun0 is gluetun's WireGuard interface.
+iptables -A FORWARD -s 172.18.0.0/16 -o tun0 -j ACCEPT
+iptables -A FORWARD -d 172.18.0.0/16 -i tun0 -j ACCEPT
+iptables -t nat -A POSTROUTING -s 172.18.0.0/16 -o tun0 -j MASQUERADE

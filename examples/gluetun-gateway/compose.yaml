@@ -1,0 +1,51 @@
+---
+# Self-contained example: degc + a shared gluetun VPN gateway + one member.
+# The gateway declares itself with a `degc.gateway` label, so no gateways.yaml
+# is needed. Fill in your VPN provider + credentials before running.
+#
+# HOST PREREQ: /dev/net/tun (modprobe tun). degc needs CAP_NET_ADMIN + host netns.
+services:
+  degc:
+    image: ghcr.io/davidborzek/degc
+    container_name: degc
+    network_mode: host           # rules + policy routing live in the host netns
+    cap_drop: [ALL]
+    cap_add: [NET_ADMIN]
+    read_only: true
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      DEGC_METRICS_ADDR: "127.0.0.1:9101"   # optional: /metrics /healthz /readyz
+
+  vpn:                           # shared VPN gateway
+    image: qmcgaw/gluetun
+    container_name: vpn
+    cap_add: [NET_ADMIN]
+    devices: ["/dev/net/tun:/dev/net/tun"]
+    restart: unless-stopped
+    environment:
+      VPN_SERVICE_PROVIDER: "<your-provider>"
+      VPN_TYPE: wireguard
+      # WIREGUARD_PRIVATE_KEY / WIREGUARD_ADDRESSES: via an env_file / secret
+      FIREWALL_OUTBOUND_SUBNETS: "172.18.0.0/16"   # your Docker network subnet
+    volumes:
+      - ./post-rules.txt:/iptables/post-rules.txt:ro
+    labels:
+      degc.gateway: "vpn"        # this container IS the gateway named "vpn"
+
+  qbittorrent:                   # any app opts in with two labels
+    image: ghcr.io/home-operations/qbittorrent
+    container_name: qbittorrent
+    restart: unless-stopped
+    # dns: ["<your-vpn-dns>"]      # resolve via the VPN's DNS (avoid a DNS leak)
+    labels:
+      degc.enable: "true"
+      degc.via: "vpn"
+
+networks:
+  default:
+    # pin the subnet so it matches FIREWALL_OUTBOUND_SUBNETS + post-rules.txt
+    ipam:
+      config:
+        - subnet: 172.18.0.0/16

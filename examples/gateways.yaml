@@ -1,0 +1,29 @@
+# degc gateways config (DEGC_GATEWAYS_PATH). OPTIONAL: a gateway container can
+# instead declare itself with a `degc.gateway: <name>` label — see
+# examples/gluetun-gateway/. Use this file for a host-interface gateway, or to
+# override an auto-derived mark/table.
+#
+# A gateway is just a name + an egress. Everything else is optional:
+#   snat          inferred (true for a host interface, false for a container)
+#   mark, table   auto-derived from the name (stable); set only on a collision
+#   localSubnets  default RFC1918 (kept direct / never tunnelled)
+#   members       label selectors — route matching containers WITHOUT a
+#                 per-container `degc.enable` label (explicit opt-in still wins)
+
+# (a) egress out a host WireGuard interface (e.g. a router hop). snat defaults true.
+- name: vpn
+  egress:
+    interface: wg0
+  default: true            # used by `degc.enable` without `degc.via`
+  # OPTIONAL central selection: any container matching a selector is routed
+  # via this gateway with no `degc.enable` label. A container matching two
+  # gateways' selectors is a conflict (surfaced, not routed).
+  members:
+    - com.docker.compose.service: sabnzbd   # route this Compose service
+    - vpn: "true"                           # or anything tagged vpn=true
+
+# (b) egress via a gateway container (gluetun), resolved to its live IP each
+#     reconcile. Prefer declaring this with a `degc.gateway` label instead.
+# - name: vpn
+#   egress:
+#     container: gluetun

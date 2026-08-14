@@ -1,0 +1,42 @@
+[package]
+name = "degc"
+version = "0.1.0"
+edition = "2024"
+description = "Label-driven VPN egress policy-routing for Docker"
+license = "MIT"
+repository = "https://github.com/davidborzek/degc"
+homepage = "https://github.com/davidborzek/degc"
+readme = "README.md"
+rust-version = "1.85"
+keywords = ["wireguard", "docker", "vpn", "policy-routing", "nftables"]
+categories = ["command-line-utilities", "network-programming"]
+
+[dependencies]
+anyhow = "1.0"
+axum = "0.8"
+bollard = "0.21.0"
+clap = { version = "4.5", features = ["derive"] }
+futures-util = "0.3"
+ipnetwork = "0.21"
+prometheus-client = "0.22"
+schemars = "1.2"
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml_ng = "0.10.0"
+tokio = { version = "1.53", features = ["rt-multi-thread", "macros", "signal", "time", "net"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Enforcement programs the host via `nft -f` (atomic table replace) and `ip`
+# (rule/route) — the applied ruleset is exactly what `--dry-run` renders, so the
+# privacy-critical kill-switch is auditable. Needs `nft` + `ip` in the image
+# (nftables + iproute2) and CAP_NET_ADMIN. No VPN dependency — the tunnel is
+# external. (A netlink-native backend, rustables + rtnetlink, is a later option.)
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+all = "deny"
+
+[profile.release]
+strip = true      # symbols stripped by cargo — no binutils needed in the image
